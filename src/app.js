@@ -13,6 +13,7 @@ app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.urlencoded({ extended: true }));
 
 const accountData = fs.readFileSync(
   path.join(__dirname, 'json', 'accounts.json'), 'utf8'
@@ -25,19 +26,45 @@ const userData = fs.readFileSync(
 const users = JSON.parse(userData);
 
 app.get('/', (req, resp) => {
-  return resp.render('index', { title: 'Account Summary', accounts });
+  resp.render('index', { title: 'Account Summary', accounts });
 });
 
 app.get('/savings', (req, resp) => {
-  return resp.render('account', { account: accounts.savings });
+  resp.render('account', { account: accounts.savings });
 });
 
 app.get('/checking', (req, resp) => {
-  return resp.render('account', { account: accounts.checking });
+  resp.render('account', { account: accounts.checking });
 });
 
 app.get('/credit', (req, resp) => {
-  return resp.render('account', { account: accounts.credit });
+  resp.render('account', { account: accounts.credit });
+});
+
+app.get('/transfer', (req, resp) => {
+  resp.render('transfer');
+});
+app.post('/transfer', (req, resp) => {
+  const amount = parseInt(req.body.amount, 10);
+  accounts[req.body.from].balance = accounts[req.body.from].balance - amount;
+  accounts[req.body.to].balance = parseInt(accounts[req.body.to].balance) + amount;
+  
+  const accountsJson = JSON.stringify(accounts, null, 4);
+  fs.writeFileSync(path.join(__dirname, 'json/accounts.json'), accountsJson, 'utf8');
+  resp.render('transfer', { message: 'Transfer Completed'});
+});
+
+app.get('/payment', (req, resp) => {
+  resp.render('payment', { account: accounts.credit });
+});
+app.post('/payment', (req, resp) => {
+  const amount = parseInt(req.body.amount, 10);
+  accounts.credit.balance -= amount;
+  accounts.credit.available += amount;
+  
+  const accountsJson = JSON.stringify(accounts, null, 4);
+  fs.writeFileSync(path.join(__dirname, 'json', 'accounts.json'), accountsJson, 'utf8');
+  resp.render('payment', { message: 'Payment Successful', account: accounts.credit });
 });
 
 app.get('/profile', (req, resp) => {
